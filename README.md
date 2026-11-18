@@ -1,0 +1,374 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Mapa de Blocos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: cabeçalho fixo com totais; ruas A–E em colunas lado a lado, rolagem horizontal; folhas de ação embaixo. */
+:root {
+  --bg: #eef1ee;
+  --surface: #ffffff;
+  --ink: #1b2420;
+  --muted: #66736b;
+  --line: #1b2420;
+  --soft: #cfd8d2;
+  --accent: #1f6b46;
+  --on-accent: #ffffff;
+  --hit: #ffe36b;
+  --ref: #dcebe0;
+  --vago: #e4e8e5;
+  --danger: #b3261e;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1c2420; --ink: #e8efe9; --muted: #93a39a; --line: #7d8c83;
+    --soft: #33403a; --accent: #5fc58f; --on-accent: #0c1a12; --hit: #8a7410; --ref: #24382c;
+    --vago: #262e29; --danger: #ff8a80; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1c2420; --ink: #e8efe9; --muted: #93a39a; --line: #7d8c83;
+  --soft: #33403a; --accent: #5fc58f; --on-accent: #0c1a12; --hit: #8a7410; --ref: #24382c;
+  --vago: #262e29; --danger: #ff8a80; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px;
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; overflow-x: hidden;
+}
+button { font: inherit; color: inherit; }
+header {
+  background: var(--accent); color: var(--on-accent);
+  padding: 10px max(16px, env(safe-area-inset-left, 0px)) 10px max(16px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 12px; flex: none;
+}
+header h1 { font: 700 19px/1.1 var(--display); margin: 0; }
+header p { margin: 2px 0 0; font-size: 12px; opacity: .9; font-variant-numeric: tabular-nums; }
+header .sp { flex: 1; min-width: 0; }
+.ib {
+  background: transparent; border: 1.5px solid currentColor; color: inherit; border-radius: 8px;
+  height: 40px; min-width: 40px; padding: 0 10px; cursor: pointer; display: grid; place-items: center;
+}
+.ib svg { width: 20px; height: 20px; }
+main {
+  flex: 1; min-height: 0; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden;
+  padding: 10px max(16px, env(safe-area-inset-left, 0px)); scroll-snap-type: x proximity;
+}
+.street { flex: none; width: 188px; display: flex; flex-direction: column; min-height: 0; scroll-snap-align: start; }
+.sh { background: var(--ink); color: var(--bg); padding: 6px 8px; flex: none; }
+.sh b { font: 700 20px/1 var(--display); }
+.sh small { display: block; font-size: 11px; opacity: .85; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.list { flex: 1; min-height: 0; overflow-y: auto; background: var(--surface); border: 1.5px solid var(--line); border-top: 0; }
+.row {
+  display: flex; width: 100%; height: 50px; border: 0; border-bottom: 1.5px solid var(--line);
+  background: var(--surface); padding: 0; text-align: left; cursor: pointer;
+}
+.row:focus-visible, .ib:focus-visible, .btn:focus-visible { outline: 3px solid var(--hit); outline-offset: -3px; }
+.row .pos { width: 24px; flex: none; font-size: 10px; color: var(--muted); padding: 4px 0 0 4px; font-variant-numeric: tabular-nums; }
+.row .num { flex: 2.2; display: grid; place-items: center; font: 700 20px var(--display); border-right: 1.5px solid var(--line); font-variant-numeric: tabular-nums; }
+.row .fd { flex: 1.2; display: grid; place-items: center; font-size: 15px; font-variant-numeric: tabular-nums; }
+.row.hit { background: var(--hit); }
+.row.ref { background: var(--ref); height: 40px; align-items: center; gap: 8px; justify-content: center; }
+.row.ref svg { width: 22px; height: 22px; }
+.row.ref span.t { font-weight: 600; }
+.row.vago { background: var(--vago); color: var(--muted); align-items: center; justify-content: center; }
+.empty { padding: 14px 10px; color: var(--muted); font-size: 13px; }
+.add { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.btn {
+  border: 1.5px solid var(--ink); background: transparent; border-radius: 8px; min-height: 42px;
+  padding: 0 12px; cursor: pointer; font-weight: 600;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn[disabled] { opacity: .45; cursor: default; }
+.full { text-align: center; color: var(--muted); font-size: 13px; padding: 6px; }
+
+.ov { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet {
+  background: var(--surface); width: min(100%, 460px); max-height: 92%; overflow-y: auto;
+  border-radius: 14px 14px 0 0; padding: 16px max(16px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 12px;
+}
+@media (min-width: 560px) { .ov { align-items: center; } .sheet { border-radius: 14px; } }
+.sheet h2 { margin: 0; font: 700 18px var(--display); }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+input, select, textarea {
+  font: inherit; font-size: 17px; color: var(--ink); background: var(--bg); border: 1.5px solid var(--soft);
+  border-radius: 8px; padding: 10px; width: 100%;
+}
+textarea { font-size: 12px; min-height: 120px; font-family: ui-monospace, monospace; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.err { font-size: 13px; color: var(--danger); margin: 0; font-weight: 600; }
+.acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.acts .btn { flex: 1 1 auto; }
+.opt { display: flex; align-items: center; gap: 10px; padding: 8px 4px; font-size: 16px; color: var(--ink); font-weight: 500; flex-direction: row; }
+.opt input { width: 20px; height: 20px; }
+.opt svg { width: 24px; height: 24px; }
+</style>
+
+<header>
+  <div class="sp">
+    <h1>Mapa de Blocos</h1>
+    <p id="tot"></p>
+  </div>
+  <button class="ib" id="bSearch" aria-label="Buscar bloco">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+  </button>
+  <button class="ib" id="bBackup" aria-label="Backup">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10M8 10l4 4 4-4M5 19h14"/></svg>
+  </button>
+</header>
+<main id="main"></main>
+<div id="ov" hidden></div>
+
+<script>
+var MAXB = 50, MINF = 1, MAXF = 150, STREETS = ["A","B","C","D","E"], KEY = "mapa_blocos_v1";
+var REF = {
+  casa: { label: "Casa", svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-7 9 7M6 10v10h12V10M10 20v-6h4v6"/></svg>' },
+  hidrante: { label: "Hidrante", svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 3h6v3H9zM8 6h8v3H8zM9 9h6v11H9zM5 12h4v4H5zM15 12h4v4h-4z"/></svg>' },
+  eucalipto: { label: "Eucalipto", svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2c4 3 5 8 0 13-5-5-4-10 0-13zM12 15v7"/></svg>' }
+};
+var data = load(), hl = null;
+
+function empty() { var o = {}; STREETS.forEach(function (s) { o[s] = []; }); return o; }
+function load() {
+  try {
+    var r = localStorage.getItem(KEY);
+    if (r) { var o = JSON.parse(r), d = empty(); STREETS.forEach(function (s) { if (Array.isArray(o[s])) d[s] = o[s]; }); return d; }
+  } catch (e) {}
+  return empty();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }
+function isBlock(it) { return it.t === "B"; }
+function used(s) { return data[s].filter(function (i) { return i.t === "B" || i.t === "V"; }).length; }
+function nBlocks(s) { return data[s].filter(isBlock).length; }
+function nVagas(s) { return data[s].filter(function (i) { return i.t === "V"; }).length; }
+function bales(s) { return data[s].reduce(function (a, i) { return a + (isBlock(i) ? i.f : 0); }, 0); }
+function find(n) {
+  for (var k = 0; k < STREETS.length; k++) {
+    var idx = data[STREETS[k]].findIndex(function (i) { return isBlock(i) && i.n === n; });
+    if (idx >= 0) return { s: STREETS[k], i: idx };
+  }
+  return null;
+}
+function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+function render() {
+  var tb = 0, tf = 0;
+  STREETS.forEach(function (s) { tb += nBlocks(s); tf += bales(s); });
+  document.getElementById("tot").textContent = tb + " blocos · " + tf + " fardos";
+  var keep = document.getElementById("main").scrollLeft;
+  var html = "";
+  STREETS.forEach(function (s) {
+    var v = nVagas(s);
+    html += '<section class="street"><div class="sh"><b>Rua ' + s + '</b><small>' + nBlocks(s) + "/" + MAXB + " blocos · " + bales(s) + " fardos" + (v ? " · " + v + (v > 1 ? " vagas" : " vaga") : "") + '</small></div><div class="list">';
+    if (!data[s].length) html += '<div class="empty">Rua vazia. Toque em + Bloco para começar.</div>';
+    data[s].forEach(function (it, i) {
+      var p = '<span class="pos">' + (i + 1) + "</span>";
+      if (it.t === "B") html += '<button class="row' + (hl === it.n ? " hit" : "") + '" data-s="' + s + '" data-i="' + i + '" data-n="' + it.n + '">' + p + '<span class="num">' + it.n + '</span><span class="fd">' + it.f + "</span></button>";
+      else if (it.t === "V") html += '<button class="row vago" data-s="' + s + '" data-i="' + i + '">' + p + "Vaga</button>";
+      else html += '<button class="row ref" data-s="' + s + '" data-i="' + i + '">' + REF[it.t].svg + '<span class="t">' + REF[it.t].label + "</span></button>";
+    });
+    html += '<div class="add">';
+    if (used(s) < MAXB || nVagas(s)) html += '<button class="btn" data-add="' + s + '">+ Bloco</button>';
+    else html += '<div class="full">Rua cheia (' + MAXB + ")</div>";
+    html += '<button class="btn" data-ref="' + s + '">+ Referência</button></div></div></section>';
+  });
+  var m = document.getElementById("main");
+  m.innerHTML = html; m.scrollLeft = keep;
+  var h = m.querySelector(".row.hit"); if (h && hl !== null && scrollHit) { h.scrollIntoView({ block: "center", inline: "center" }); scrollHit = false; }
+}
+var scrollHit = false;
+
+function open(html) { var o = document.getElementById("ov"); o.innerHTML = '<div class="ov"><div class="sheet">' + html + "</div></div>"; o.hidden = false; var f = o.querySelector("input,select,textarea"); if (f && matchMedia("(pointer:fine)").matches) f.focus(); }
+function close() { var o = document.getElementById("ov"); o.hidden = true; o.innerHTML = ""; }
+function $(id) { return document.getElementById(id); }
+function num(id) { var v = $(id).value.trim(); return v === "" ? null : parseInt(v, 10); }
+function showErr(m) { var e = $("err"); e.textContent = m; }
+function vagasList(s) { var a = []; data[s].forEach(function (it, i) { if (it.t === "V") a.push(i + 1); }); return a; }
+
+function checkNum(n, f, selfS, selfI) {
+  if (n === null || isNaN(n) || n < 0) return "Informe o número do bloco.";
+  if (f === null || isNaN(f)) return "Informe a quantidade de fardos.";
+  if (f < MINF || f > MAXF) return "Cada bloco deve ter de " + MINF + " a " + MAXF + " fardos.";
+  var o = find(n);
+  if (o && !(o.s === selfS && o.i === selfI)) return "O bloco " + n + " já existe na rua " + o.s + ", posição " + (o.i + 1) + ".";
+  return null;
+}
+
+/* Novo bloco */
+function addSheet(s, at) {
+  var vg = vagasList(s), fixed = at !== undefined;
+  open("<h2>" + (fixed ? "Vaga " + (at + 1) + " · rua " + s : "Novo bloco · rua " + s) + "</h2>" +
+    '<label>Número do bloco<input id="fn" inputmode="numeric" maxlength="6"></label>' +
+    '<label>Fardos (1 a 150)<input id="ff" inputmode="numeric" maxlength="3"></label>' +
+    (!fixed && vg.length ? '<label>Posição da vaga (vazio = primeira)<input id="fp" inputmode="numeric" maxlength="2"></label><p class="hint">Vagas: ' + vg.join(", ") + "</p>" : "") +
+    '<p class="err" id="err"></p><div class="acts"><button class="btn" id="x">Cancelar</button><button class="btn primary" id="ok">Salvar</button></div>');
+  $("x").onclick = close;
+  $("ok").onclick = function () {
+    var n = num("fn"), f = num("ff"), e = checkNum(n, f);
+    if (e) return showErr(e);
+    var list = data[s], slot = -1;
+    if (fixed) slot = at;
+    else {
+      var p = $("fp") ? num("fp") : null;
+      if (p !== null) { if (vg.indexOf(p) < 0) return showErr("A posição " + p + " não é uma vaga."); slot = p - 1; }
+      else if (vg.length) slot = vg[0] - 1;
+    }
+    if (slot >= 0) list[slot] = { t: "B", n: n, f: f };
+    else { if (used(s) >= MAXB) return showErr("A rua " + s + " já tem " + MAXB + " blocos."); list.push({ t: "B", n: n, f: f }); }
+    save(); close(); render();
+  };
+}
+
+/* Editar bloco */
+function blockSheet(s, i) {
+  var it = data[s][i];
+  open("<h2>Bloco " + it.n + " · rua " + s + ", posição " + (i + 1) + "</h2>" +
+    '<label>Número do bloco<input id="fn" inputmode="numeric" maxlength="6" value="' + it.n + '"></label>' +
+    '<label>Fardos (1 a 150)<input id="ff" inputmode="numeric" maxlength="3" value="' + it.f + '"></label>' +
+    '<p class="err" id="err"></p>' +
+    '<button class="btn primary" id="ok">Salvar</button>' +
+    '<button class="btn" id="ld">Bloco carregado</button>' +
+    '<div class="acts"><button class="btn" id="up">Subir</button><button class="btn" id="dn">Descer</button><button class="btn danger" id="del">Excluir</button></div>' +
+    '<button class="btn" id="x">Fechar</button>');
+  $("x").onclick = close;
+  $("ok").onclick = function () {
+    var n = num("fn"), f = num("ff"), e = checkNum(n, f, s, i);
+    if (e) return showErr(e);
+    data[s][i] = { t: "B", n: n, f: f }; save(); close(); render();
+  };
+  $("ld").onclick = function () { loadSheet(s, i); };
+  $("up").onclick = function () { mv(s, i, -1); };
+  $("dn").onclick = function () { mv(s, i, 1); };
+  $("del").onclick = function () { confirmDel(s, i, "Excluir o bloco " + it.n + "? A posição " + (i + 1) + " será removida e as seguintes sobem."); };
+}
+function mv(s, i, d) {
+  var j = i + d; if (j < 0 || j >= data[s].length) return;
+  var t = data[s][i]; data[s][i] = data[s][j]; data[s][j] = t; save(); close(); render();
+}
+function confirmDel(s, i, msg) {
+  open("<h2>Confirmar</h2><p class='hint'>" + esc(msg) + '</p><div class="acts"><button class="btn" id="x">Voltar</button><button class="btn danger" id="y">Excluir</button></div>');
+  $("x").onclick = close;
+  $("y").onclick = function () { data[s].splice(i, 1); save(); close(); render(); };
+}
+
+/* Bloco carregado */
+function loadSheet(s, i) {
+  var it = data[s][i];
+  open("<h2>Bloco " + it.n + " carregado</h2><p class='hint'>Fardos no bloco: " + it.f + "</p>" +
+    '<label>Fardos carregados<input id="fq" inputmode="numeric" maxlength="3"></label>' +
+    '<button class="btn" id="all">Carregou tudo (' + it.f + ')</button>' +
+    '<p class="hint" id="prev"></p><p class="err" id="err"></p>' +
+    '<div class="acts"><button class="btn" id="x">Voltar</button><button class="btn primary" id="ok">Confirmar</button></div>');
+  function prev() {
+    var q = num("fq"), p = $("prev");
+    if (q && q > 0 && q <= it.f) p.textContent = q === it.f ? "O bloco será excluído e a posição " + (i + 1) + " ficará vaga." : "Restarão " + (it.f - q) + " fardos no bloco.";
+    else p.textContent = "";
+  }
+  $("fq").oninput = prev;
+  $("all").onclick = function () { $("fq").value = it.f; prev(); };
+  $("x").onclick = function () { blockSheet(s, i); };
+  $("ok").onclick = function () {
+    var q = num("fq");
+    if (!q || q < 1) return showErr("Informe quantos fardos foram carregados.");
+    if (q > it.f) return showErr("O bloco " + it.n + " só tem " + it.f + " fardos.");
+    if (q === it.f) data[s][i] = { t: "V" }; else data[s][i] = { t: "B", n: it.n, f: it.f - q };
+    save(); close(); render();
+  };
+}
+
+/* Vaga */
+function vagaSheet(s, i) {
+  open("<h2>Vaga " + (i + 1) + " · rua " + s + "</h2><p class='hint'>Esta posição está livre. O novo bloco ocupa exatamente este lugar.</p>" +
+    '<button class="btn primary" id="fill">Colocar bloco aqui</button><button class="btn danger" id="del">Remover vaga</button><button class="btn" id="x">Fechar</button>');
+  $("x").onclick = close;
+  $("fill").onclick = function () { addSheet(s, i); };
+  $("del").onclick = function () { confirmDel(s, i, "Remover a vaga " + (i + 1) + "? As posições seguintes sobem."); };
+}
+
+/* Referências */
+function refAddSheet(s) {
+  open("<h2>Referência · rua " + s + "</h2>" +
+    ["casa", "hidrante", "eucalipto"].map(function (k, n) { return '<label class="opt"><input type="radio" name="rt" value="' + k + '"' + (n === 0 ? " checked" : "") + ">" + REF[k].svg + REF[k].label + "</label>"; }).join("") +
+    '<label>Posição na rua (vazio = no fim)<input id="fp" inputmode="numeric" maxlength="2"></label>' +
+    '<div class="acts"><button class="btn" id="x">Cancelar</button><button class="btn primary" id="ok">Adicionar</button></div>');
+  $("x").onclick = close;
+  $("ok").onclick = function () {
+    var t = document.querySelector("input[name=rt]:checked").value, p = num("fp"), l = data[s];
+    var at = p === null ? l.length : Math.max(0, Math.min(l.length, p - 1));
+    l.splice(at, 0, { t: t }); save(); close(); render();
+  };
+}
+function refSheet(s, i) {
+  var it = data[s][i];
+  open("<h2>" + REF[it.t].label + " · rua " + s + ", posição " + (i + 1) + "</h2>" +
+    '<div class="acts"><button class="btn" id="up">Subir</button><button class="btn" id="dn">Descer</button><button class="btn danger" id="del">Excluir</button></div><button class="btn" id="x">Fechar</button>');
+  $("x").onclick = close;
+  $("up").onclick = function () { mv(s, i, -1); };
+  $("dn").onclick = function () { mv(s, i, 1); };
+  $("del").onclick = function () { data[s].splice(i, 1); save(); close(); render(); };
+}
+
+/* Busca */
+function searchSheet() {
+  open("<h2>Buscar bloco</h2>" +
+    '<label>Número do bloco<input id="fn" inputmode="numeric" maxlength="6"></label><p class="hint" id="res"></p>' +
+    '<div class="acts"><button class="btn" id="clr">Limpar destaque</button><button class="btn primary" id="go">Buscar</button></div><button class="btn" id="x">Fechar</button>');
+  $("x").onclick = close;
+  $("clr").onclick = function () { hl = null; close(); render(); };
+  function go() {
+    var n = num("fn"), r = $("res");
+    if (n === null) { r.textContent = "Informe o número do bloco."; return; }
+    var h = find(n);
+    if (!h) { hl = null; r.textContent = "Bloco " + n + " não encontrado."; render(); return; }
+    hl = n; scrollHit = true;
+    r.textContent = "Bloco " + n + ": rua " + h.s + ", posição " + (h.i + 1) + ", " + data[h.s][h.i].f + " fardos.";
+    close(); render();
+  }
+  $("go").onclick = go;
+  $("fn").onkeydown = function (e) { if (e.key === "Enter") go(); };
+}
+
+/* Backup */
+function backupSheet() {
+  open("<h2>Backup</h2><p class='hint'>Os dados ficam salvos neste navegador. Copie o texto abaixo e guarde (por exemplo, enviando para você no WhatsApp). Para restaurar, cole o texto e toque em Restaurar.</p>" +
+    '<textarea id="bk" spellcheck="false"></textarea><p class="err" id="err"></p><p class="hint" id="msg"></p>' +
+    '<div class="acts"><button class="btn" id="cp">Copiar</button><button class="btn danger" id="rs">Restaurar</button></div><button class="btn" id="x">Fechar</button>');
+  $("bk").value = JSON.stringify(data);
+  $("x").onclick = close;
+  $("cp").onclick = function () {
+    var t = $("bk"); t.value = JSON.stringify(data);
+    function sel() { t.select(); t.setSelectionRange(0, 999999); $("msg").textContent = "Texto selecionado. Use Copiar do teclado."; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(function () { $("msg").textContent = "Copiado."; }, sel); else sel();
+  };
+  $("rs").onclick = function () {
+    try {
+      var o = JSON.parse($("bk").value), d = empty();
+      STREETS.forEach(function (s) {
+        if (!Array.isArray(o[s])) return;
+        d[s] = o[s].filter(function (it) { return it && (it.t === "V" || REF[it.t] || (it.t === "B" && isFinite(it.n) && isFinite(it.f))); });
+      });
+      data = d; save(); close(); render();
+    } catch (e) { showErr("Texto inválido. Cole o backup completo."); }
+  };
+}
+
+document.getElementById("main").addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.add) return addSheet(b.dataset.add);
+  if (b.dataset.ref) return refAddSheet(b.dataset.ref);
+  var s = b.dataset.s, i = +b.dataset.i, it = data[s] && data[s][i]; if (!it) return;
+  if (it.t === "B") blockSheet(s, i); else if (it.t === "V") vagaSheet(s, i); else refSheet(s, i);
+});
+document.getElementById("ov").addEventListener("click", function (e) { if (e.target.classList.contains("ov")) close(); });
+$("bSearch").onclick = searchSheet;
+$("bBackup").onclick = backupSheet;
+render();
+</script>
+
+</body></html>
